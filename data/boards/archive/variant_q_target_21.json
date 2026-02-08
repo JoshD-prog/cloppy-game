@@ -1,0 +1,85 @@
+{
+  "name": "Variant Q - Target 21",
+  "board": {
+    "spaces": [
+      "start",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "neutral",
+      "end"
+    ]
+  },
+  "good_deck": {
+    "cards": [
+      {
+        "id": "counter_next_bad",
+        "count": 1
+      },
+      {
+        "id": "jump_forward",
+        "count": 1,
+        "params": {
+          "steps": 2
+        }
+      },
+      {
+        "id": "jump_forward",
+        "count": 1,
+        "params": {
+          "steps": 3
+        }
+      },
+      {
+        "id": "jump_next_neutral",
+        "count": 1
+      },
+      {
+        "id": "roll_forward",
+        "count": 1
+      },
+      {
+        "id": "extra_turn",
+        "count": 1
+      },
+      {
+        "id": "go_to_end",
+        "count": 1,
+        "pin_last": true
+      }
+    ]
+  },
+  "bad_deck": {
+    "cards": [
+      {
+        "id": "go_back",
+        "count": 1,
+        "params": {
+          "steps": 1
+        }
+      },
+      {
+        "id": "go_back",
+        "count": 1,
+        "params": {
+          "steps": 2
+        }
+      },
+      {
+        "id": "roll_back",
+        "count": 1
+      }
+    ]
+  }
+}

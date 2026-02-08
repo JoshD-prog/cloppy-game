@@ -1,0 +1,88 @@
+{
+  "name": "Variant G - Pattern 23 (More Buffed)",
+  "board": {
+    "spaces": [
+      "start",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "good",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "good",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "good",
+      "good",
+      "bad",
+      "good",
+      "end"
+    ]
+  },
+  "good_deck": {
+    "cards": [
+      {
+        "id": "jump_forward",
+        "count": 2,
+        "params": {
+          "steps": 2
+        }
+      },
+      {
+        "id": "jump_forward",
+        "count": 2,
+        "params": {
+          "steps": 3
+        }
+      },
+      {
+        "id": "go_to_end",
+        "count": 1,
+        "pin_last": true
+      },
+      {
+        "id": "roll_forward",
+        "count": 1
+      },
+      {
+        "id": "extra_turn",
+        "count": 1
+      }
+    ]
+  },
+  "bad_deck": {
+    "cards": [
+      {
+        "id": "go_back",
+        "count": 2,
+        "params": {
+          "steps": 1
+        }
+      },
+      {
+        "id": "go_back",
+        "count": 1,
+        "params": {
+          "steps": 2
+        }
+      },
+      {
+        "id": "lose_turn",
+        "count": 1
+      },
+      {
+        "id": "go_to_start",
+        "count": 1
+      }
+    ]
+  }
+}

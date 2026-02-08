@@ -1,0 +1,123 @@
+{
+  "name": "Variant E2 - Pattern 25 (Buffed Good)",
+  "board": {
+    "spaces": [
+      "start",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "bad",
+      "neutral",
+      "good",
+      "neutral",
+      "end"
+    ]
+  },
+  "good_deck": {
+    "cards": [
+      {
+        "id": "counter_next_bad",
+        "count": 4
+      },
+      {
+        "id": "jump_forward",
+        "count": 1,
+        "params": {
+          "steps": 1
+        }
+      },
+      {
+        "id": "jump_forward",
+        "count": 1,
+        "params": {
+          "steps": 2
+        }
+      },
+      {
+        "id": "jump_forward",
+        "count": 1,
+        "params": {
+          "steps": 2
+        }
+      },
+      {
+        "id": "jump_forward",
+        "count": 1,
+        "params": {
+          "steps": 2
+        }
+      },
+      {
+        "id": "jump_forward",
+        "count": 1,
+        "params": {
+          "steps": 3
+        }
+      },
+      {
+        "id": "jump_next_neutral",
+        "count": 3
+      },
+      {
+        "id": "go_to_end",
+        "count": 1,
+        "pin_last": true
+      },
+      {
+        "id": "roll_forward",
+        "count": 1
+      },
+      {
+        "id": "extra_turn",
+        "count": 1
+      }
+    ]
+  },
+  "bad_deck": {
+    "cards": [
+      {
+        "id": "go_back",
+        "count": 1,
+        "params": {
+          "steps": 1
+        }
+      },
+      {
+        "id": "go_back",
+        "count": 1,
+        "params": {
+          "steps": 2
+        }
+      },
+      {
+        "id": "roll_back",
+        "count": 1
+      },
+      {
+        "id": "lose_turn",
+        "count": 1
+      },
+      {
+        "id": "go_to_start",
+        "count": 1
+      }
+    ]
+  }
+}
