@@ -112,6 +112,7 @@ function showCardModal(type, cardText, card) {
   overlay.setAlpha(0);
   overlay.setScale(0.2);
   overlay.angle = -12;
+  overlay.isClosing = false;
 
   overlay.typeText.setText(type === "good" ? "Modern Advantage" : "Legacy Setback");
   overlay.titleText.setText(cardText.title);
@@ -128,6 +129,12 @@ function showCardModal(type, cardText, card) {
     ease: "Back.easeOut",
   });
 
+  if (gameScene?.input) {
+    gameScene.time.delayedCall(60, () => {
+      gameScene.input.once("pointerdown", closeCardModal);
+    });
+  }
+
   return new Promise((resolve) => {
     cardResolve = resolve;
   });
@@ -136,6 +143,8 @@ function showCardModal(type, cardText, card) {
 function closeCardModal() {
   if (!gameScene || !gameScene.cardOverlay) return;
   const overlay = gameScene.cardOverlay;
+  if (overlay.isClosing) return;
+  overlay.isClosing = true;
   gameScene.tweens.add({
     targets: overlay,
     alpha: 0,
@@ -145,6 +154,7 @@ function closeCardModal() {
     ease: "Back.easeIn",
     onComplete: () => {
       overlay.setVisible(false);
+      overlay.isClosing = false;
       if (cardResolve) {
         cardResolve();
         cardResolve = null;
@@ -238,10 +248,12 @@ function createGame(data) {
     this.diceText.setOrigin(0.5);
     this.diceGroup.add([this.diceBox, this.diceText]);
     this.diceGroup.setVisible(false);
+    this.diceGroup.setScrollFactor(0);
 
     this.cardOverlay = buildCardOverlay(this);
     this.cardOverlay.setDepth(10);
     this.cardOverlay.setVisible(false);
+    this.cardOverlay.setScrollFactor(0);
 
     drawBoard(this);
 
@@ -377,7 +389,7 @@ function createGame(data) {
 
     const cardBg = scene.add.rectangle(0, 0, cardWidth, cardHeight, 0xffffff, 1);
     cardBg.setStrokeStyle(3, 0x000000, 1);
-    cardBg.setInteractive(new Phaser.Geom.Rectangle(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight), Phaser.Geom.Rectangle.Contains);
+    cardBg.setInteractive({ useHandCursor: true });
 
     const accent = scene.add.rectangle(0, -cardHeight * 0.38, cardWidth * 0.78, 12, GOOD_COLOR, 1);
 
@@ -420,6 +432,7 @@ function createGame(data) {
 
     const buttonBg = scene.add.rectangle(0, cardHeight * 0.37, cardWidth * 0.55, 48, 0x111111, 1);
     buttonBg.setStrokeStyle(0);
+    buttonBg.setInteractive({ useHandCursor: true });
     const buttonText = scene.add.text(0, cardHeight * 0.37, "Continue", {
       fontFamily: "Space Grotesk",
       fontSize: 16,
@@ -441,10 +454,15 @@ function createGame(data) {
     overlay.buttonText = buttonText;
 
     const closeHandler = () => closeCardModal();
+    overlay.setSize(cardWidth, cardHeight);
+    overlay.setInteractive(
+      new Phaser.Geom.Rectangle(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight),
+      Phaser.Geom.Rectangle.Contains
+    );
+    overlay.on("pointerdown", closeHandler);
     cardBg.on("pointerdown", closeHandler);
-    buttonBg.setInteractive(new Phaser.Geom.Rectangle(-buttonBg.width / 2, -buttonBg.height / 2, buttonBg.width, buttonBg.height), Phaser.Geom.Rectangle.Contains);
     buttonBg.on("pointerdown", closeHandler);
-    buttonText.setInteractive();
+    buttonText.setInteractive({ useHandCursor: true });
     buttonText.on("pointerdown", closeHandler);
 
     return overlay;
@@ -515,17 +533,52 @@ function createGame(data) {
     });
   }
 
+  function getCameraScrollFor(target, camera) {
+    if (!target || !camera) return { x: 0, y: 0 };
+    const bounds = camera.bounds;
+    const fallbackWidth = gameState?.worldWidth || camera.width;
+    const fallbackHeight = gameState?.worldHeight || camera.height;
+    const minX = bounds ? bounds.x : 0;
+    const maxX = bounds
+      ? Math.max(bounds.x, bounds.x + bounds.width - camera.width)
+      : Math.max(0, fallbackWidth - camera.width);
+    const minY = bounds ? bounds.y : 0;
+    const maxY = bounds
+      ? Math.max(bounds.y, bounds.y + bounds.height - camera.height)
+      : Math.max(0, fallbackHeight - camera.height);
+    const desiredX = Phaser.Math.Clamp(target.x - camera.width / 2, minX, maxX);
+    const desiredY = Phaser.Math.Clamp(target.y - camera.height / 2, minY, maxY);
+    return { x: desiredX, y: desiredY };
+  }
+
   function drawBoard(scene, width = scene.scale.width, height = scene.scale.height) {
-    const padding = 40;
-    const usableWidth = Math.max(width - padding * 2, 200);
-    const usableHeight = Math.max(height - padding * 2, 200);
+    const tileSize = Math.max(90, Math.min(140, height * 0.22));
+    const stepRun = tileSize * 1.12;
+    const stepRise = tileSize * 0.25;
+    const padding = tileSize * 0.9;
 
-    const columns = Math.min(8, Math.max(5, Math.ceil(Math.sqrt(totalSpaces))));
-    const rows = Math.ceil(totalSpaces / columns);
+    const rawPositions = [];
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
 
-    const cellSize = Math.min(usableWidth / columns, usableHeight / rows);
-    const offsetX = (width - cellSize * columns) / 2;
-    const offsetY = (height - cellSize * rows) / 2;
+    for (let i = 0; i < totalSpaces; i += 1) {
+      const centerX = i * stepRun;
+      const centerY = -i * stepRise;
+      rawPositions.push({ x: centerX, y: centerY });
+      minX = Math.min(minX, centerX - tileSize * 0.5);
+      maxX = Math.max(maxX, centerX + tileSize * 0.5);
+      minY = Math.min(minY, centerY - tileSize * 0.5);
+      maxY = Math.max(maxY, centerY + tileSize * 0.5);
+    }
+
+    const shiftX = padding - minX;
+    const shiftY = padding - minY;
+    const worldWidth = maxX + shiftX + padding;
+    const worldHeight = maxY + shiftY + padding;
+    gameState.worldWidth = worldWidth;
+    gameState.worldHeight = worldHeight;
 
     scene.boardGraphics.clear();
     scene.labels.forEach((label) => label.destroy());
@@ -533,11 +586,10 @@ function createGame(data) {
     scene.positions = [];
 
     for (let i = 0; i < totalSpaces; i += 1) {
-      const row = Math.floor(i / columns);
-      const colIndex = i % columns;
-      const col = row % 2 === 0 ? colIndex : columns - 1 - colIndex;
-      const x = offsetX + col * cellSize;
-      const y = offsetY + (rows - 1 - row) * cellSize;
+      const centerX = rawPositions[i].x + shiftX;
+      const centerY = rawPositions[i].y + shiftY;
+      const x = centerX - tileSize * 0.5;
+      const y = centerY - tileSize * 0.5;
 
       const spaceType = boardSpaces[i];
       const color =
@@ -545,13 +597,13 @@ function createGame(data) {
 
       scene.boardGraphics.lineStyle(3, OUTLINE_COLOR, 1);
       scene.boardGraphics.fillStyle(color, 1);
-      scene.boardGraphics.fillRoundedRect(x, y, cellSize * 0.95, cellSize * 0.95, 10);
-      scene.boardGraphics.strokeRoundedRect(x, y, cellSize * 0.95, cellSize * 0.95, 10);
+      scene.boardGraphics.fillRoundedRect(x, y, tileSize, tileSize, 12);
+      scene.boardGraphics.strokeRoundedRect(x, y, tileSize, tileSize, 12);
 
       const labelText = i === 0 ? "START" : i === totalSpaces - 1 ? "SECURE" : `${i + 1}`;
-      const label = scene.add.text(x + cellSize * 0.48, y + cellSize * 0.45, labelText, {
+      const label = scene.add.text(centerX, centerY, labelText, {
         fontFamily: "Space Grotesk",
-        fontSize: Math.max(12, Math.floor(cellSize * 0.18)),
+        fontSize: Math.max(12, Math.floor(tileSize * 0.18)),
         color: "#111111",
         fontStyle: "bold",
       });
@@ -559,19 +611,31 @@ function createGame(data) {
       label.setDepth(3);
       scene.labels.push(label);
 
-      scene.positions.push({ x: x + cellSize * 0.48, y: y + cellSize * 0.75 });
+      scene.positions.push({ x: centerX, y: centerY + tileSize * 0.2 });
     }
+
+    gameState.tileSize = tileSize;
 
     if (scene.cloppy) {
       const texture = scene.textures.get("cloppy");
       const source = texture?.getSourceImage?.();
       if (source && source.width) {
-        const targetSize = cellSize * 0.8;
+        const targetSize = tileSize * 0.85;
         const scale = targetSize / Math.max(source.width, source.height);
         scene.cloppy.setScale(scale);
       }
       const pos = scene.positions[gameState.currentIndex];
       scene.cloppy.setPosition(pos.x, pos.y);
+    }
+
+    const camera = scene.cameras.main;
+    if (camera) {
+      camera.setBounds(0, 0, worldWidth, worldHeight);
+    }
+    const currentPos = scene.positions[gameState.currentIndex];
+    if (currentPos && camera) {
+      const scroll = getCameraScrollFor(currentPos, camera);
+      camera.setScroll(scroll.x, scroll.y);
     }
 
     if (scene.diceGroup) {
@@ -602,6 +666,31 @@ function createGame(data) {
         return;
       }
 
+      const bounceHeight = Math.max(14, (gameState.tileSize || 100) * 0.22);
+      const moveDuration = 230;
+      const bounceDuration = 140;
+      const totalDuration = steps.length * (moveDuration + bounceDuration);
+      const cameraDelay = Math.min(260, Math.max(80, totalDuration * 0.25));
+
+      if (gameScene?.cameras?.main) {
+        const camera = gameScene.cameras.main;
+        if (!camera.bounds || !camera.bounds.width) {
+          camera.setBounds(0, 0, gameState.worldWidth || camera.width, gameState.worldHeight || camera.height);
+        }
+        const targetPos = gameScene.positions[targetIndex];
+        if (targetPos) {
+          const scroll = getCameraScrollFor(targetPos, camera);
+          gameScene.tweens.add({
+            targets: camera,
+            scrollX: scroll.x,
+            scrollY: scroll.y,
+            duration: Math.max(240, totalDuration - cameraDelay),
+            ease: "Sine.easeInOut",
+            delay: cameraDelay,
+          });
+        }
+      }
+
       const runStep = (stepIndex) => {
         if (stepIndex >= steps.length) {
           gameState.currentIndex = targetIndex;
@@ -614,13 +703,13 @@ function createGame(data) {
           targets: gameScene.cloppy,
           x: pos.x,
           y: pos.y,
-          duration: 240,
+          duration: moveDuration,
           ease: "Sine.easeInOut",
           onComplete: () => {
             gameScene.tweens.add({
               targets: gameScene.cloppy,
-              y: pos.y - 14,
-              duration: 120,
+              y: pos.y - bounceHeight,
+              duration: bounceDuration,
               yoyo: true,
               ease: "Sine.easeOut",
               onComplete: () => runStep(stepIndex + 1),
