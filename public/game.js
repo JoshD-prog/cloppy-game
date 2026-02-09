@@ -222,11 +222,14 @@ function createGame(data) {
   new Phaser.Game(config);
 
   function preload() {
-    this.load.svg("cloppy", "Cloppy.svg", { width: 700, height: 700 });
+    this.load.svg("cloppy", "Cloppy.svg", { width: 1200, height: 1200 });
   }
 
   function create() {
     gameScene = this;
+    if (this.cameras?.main) {
+      this.cameras.main.roundPixels = true;
+    }
     this.boardGraphics = this.add.graphics();
     this.boardGraphics.setDepth(1);
     this.labels = [];
@@ -611,7 +614,7 @@ function createGame(data) {
       label.setDepth(3);
       scene.labels.push(label);
 
-      scene.positions.push({ x: centerX, y: centerY + tileSize * 0.2 });
+      scene.positions.push({ x: centerX, y: centerY - tileSize * 0.39 });
     }
 
     gameState.tileSize = tileSize;
@@ -620,7 +623,7 @@ function createGame(data) {
       const texture = scene.textures.get("cloppy");
       const source = texture?.getSourceImage?.();
       if (source && source.width) {
-        const targetSize = tileSize * 0.85;
+        const targetSize = tileSize * 1.25;
         const scale = targetSize / Math.max(source.width, source.height);
         scene.cloppy.setScale(scale);
       }
@@ -666,10 +669,11 @@ function createGame(data) {
         return;
       }
 
-      const bounceHeight = Math.max(14, (gameState.tileSize || 100) * 0.22);
-      const moveDuration = 230;
-      const bounceDuration = 140;
-      const totalDuration = steps.length * (moveDuration + bounceDuration);
+      const baseArc = Math.max(24, (gameState.tileSize || 100) * 0.38);
+      const baseSettle = Math.max(10, (gameState.tileSize || 100) * 0.12);
+      const moveDuration = 260;
+      const settleDuration = 120;
+      const totalDuration = steps.length * (moveDuration + settleDuration);
       const cameraDelay = Math.min(260, Math.max(80, totalDuration * 0.25));
 
       if (gameScene?.cameras?.main) {
@@ -699,17 +703,32 @@ function createGame(data) {
         }
 
         const pos = gameScene.positions[steps[stepIndex]];
+        const variance = Phaser.Math.FloatBetween(0.85, 1.2);
+        const arcHeight = baseArc * variance;
+        const settleHeight = baseSettle * (arcHeight / baseArc);
+        const startX = gameScene.cloppy.x;
+        const startY = gameScene.cloppy.y;
+        const tweenState = { t: 0 };
+
         gameScene.tweens.add({
-          targets: gameScene.cloppy,
-          x: pos.x,
-          y: pos.y,
+          targets: tweenState,
+          t: 1,
           duration: moveDuration,
           ease: "Sine.easeInOut",
+          onUpdate: () => {
+            const t = tweenState.t;
+            const x = Phaser.Math.Linear(startX, pos.x, t);
+            const y =
+              Phaser.Math.Linear(startY, pos.y, t) -
+              arcHeight * 4 * t * (1 - t);
+            gameScene.cloppy.setPosition(x, y);
+          },
           onComplete: () => {
+            gameScene.cloppy.setPosition(pos.x, pos.y);
             gameScene.tweens.add({
               targets: gameScene.cloppy,
-              y: pos.y - bounceHeight,
-              duration: bounceDuration,
+              y: pos.y - settleHeight,
+              duration: settleDuration,
               yoyo: true,
               ease: "Sine.easeOut",
               onComplete: () => runStep(stepIndex + 1),
