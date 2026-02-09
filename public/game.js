@@ -7,6 +7,7 @@ const rollButton = document.getElementById("roll-button");
 const turnCountEl = document.getElementById("turn-count");
 const statusEl = document.getElementById("status-text");
 const variantNameEl = document.getElementById("variant-name");
+const stepsLeftEl = document.getElementById("steps-left");
 
 const winModal = document.getElementById("win-modal");
 const restartButton = document.getElementById("restart");
@@ -97,7 +98,13 @@ function describeEffect(card) {
 }
 
 function updateStatus(text) {
-  if (statusEl) statusEl.textContent = `Status: ${text}`;
+  if (statusEl) statusEl.textContent = text;
+}
+
+function updateStepsLeft() {
+  if (!stepsLeftEl || !gameState) return;
+  const remaining = Math.max(0, gameState.totalSpaces - 1 - gameState.currentIndex);
+  stepsLeftEl.textContent = `${remaining}`;
 }
 
 function setCanRoll(canRoll) {
@@ -260,7 +267,8 @@ function createGame(data) {
 
     drawBoard(this);
 
-    if (turnCountEl) turnCountEl.textContent = "Turn: 0";
+    if (turnCountEl) turnCountEl.textContent = "0";
+    updateStepsLeft();
     updateStatus("Ready to roll");
     setCanRoll(true);
   }
@@ -276,14 +284,14 @@ function createGame(data) {
     if (gameState.skipNextTurn) {
       gameState.skipNextTurn = false;
       gameState.turnCount += 1;
-      if (turnCountEl) turnCountEl.textContent = `Turn: ${gameState.turnCount}`;
+      if (turnCountEl) turnCountEl.textContent = `${gameState.turnCount}`;
       updateStatus("Turn skipped due to legacy slowdown.");
       setCanRoll(true);
       return;
     }
 
     gameState.turnCount += 1;
-    if (turnCountEl) turnCountEl.textContent = `Turn: ${gameState.turnCount}`;
+    if (turnCountEl) turnCountEl.textContent = `${gameState.turnCount}`;
 
     const roll = await rollDieAnimated();
     gameState.lastRoll = roll;
@@ -603,7 +611,7 @@ function createGame(data) {
       scene.boardGraphics.fillRoundedRect(x, y, tileSize, tileSize, 12);
       scene.boardGraphics.strokeRoundedRect(x, y, tileSize, tileSize, 12);
 
-      const labelText = i === 0 ? "START" : i === totalSpaces - 1 ? "SECURE" : `${i + 1}`;
+      const labelText = i === 0 ? "START" : i === totalSpaces - 1 ? "DEPLOYED" : `${i + 1}`;
       const label = scene.add.text(centerX, centerY, labelText, {
         fontFamily: "Space Grotesk",
         fontSize: Math.max(12, Math.floor(tileSize * 0.18)),
@@ -665,6 +673,7 @@ function createGame(data) {
 
       if (steps.length === 0) {
         gameState.currentIndex = targetIndex;
+        updateStepsLeft();
         resolve();
         return;
       }
@@ -698,6 +707,7 @@ function createGame(data) {
       const runStep = (stepIndex) => {
         if (stepIndex >= steps.length) {
           gameState.currentIndex = targetIndex;
+          updateStepsLeft();
           resolve();
           return;
         }

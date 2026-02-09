@@ -15,7 +15,7 @@
   </head>
   <body class="min-h-screen text-slate-900 font-['Space_Grotesk'] bg-[radial-gradient(circle_at_top,_#f3fbfa_0%,_#d7ece9_38%,_#f6e5dd_100%)]">
     <div class="max-w-6xl mx-auto px-6 py-8">
-      <header class="flex flex-wrap items-center justify-between gap-6 mb-6">
+      <header class="flex flex-wrap items-start justify-between gap-6 mb-6">
         <div>
           <p class="uppercase tracking-[0.2em] text-xs mb-2">Tech Expo Board Game</p>
           <h1 class="font-['Bungee'] text-4xl text-slate-900 mb-2">Cloppy Cloud Quest</h1>
@@ -24,41 +24,56 @@
             journey. Bad spaces recreate legacy pain points.
           </p>
         </div>
-        <div class="grid gap-2 bg-white/80 rounded-2xl p-4 shadow-lg">
-          <div class="flex items-center gap-2 font-semibold">
-            <span class="w-5 h-5 border-2 border-black rounded bg-[#abd4ce]"></span>
-            <span>Modern Win</span>
-          </div>
-          <div class="flex items-center gap-2 font-semibold">
-            <span class="w-5 h-5 border-2 border-black rounded bg-[#d33429]"></span>
-            <span>Legacy Trouble</span>
-          </div>
-          <div class="flex items-center gap-2 font-semibold">
-            <span class="w-5 h-5 border-2 border-black rounded bg-white"></span>
-            <span>Neutral</span>
-          </div>
-          <details class="bg-white/70 rounded-xl p-3 shadow-inner">
-            <summary class="cursor-pointer font-semibold">How To Play</summary>
-            <ul class="mt-2 pl-5 text-sm text-slate-700 list-disc">
+        <div class="flex flex-wrap items-start gap-4">
+          <div class="bg-white/80 rounded-2xl p-4 shadow-lg w-72">
+            <h2 class="text-xs font-semibold uppercase tracking-[0.18em] mb-2">How To Play</h2>
+            <ul class="pl-5 text-xs text-slate-700 list-disc space-y-1">
               <li>Roll to move Cloppy along the pipeline.</li>
               <li>Landing on a colored space triggers a card.</li>
               <li>Reach the end to ship to the secure environment.</li>
             </ul>
-          </details>
+          </div>
+          <div class="grid gap-2 bg-white/80 rounded-2xl p-4 shadow-lg">
+            <div class="flex items-center gap-2 font-semibold">
+              <span class="w-5 h-5 border-2 border-black rounded bg-[#abd4ce]"></span>
+              <span>Modern Win</span>
+            </div>
+            <div class="flex items-center gap-2 font-semibold">
+              <span class="w-5 h-5 border-2 border-black rounded bg-[#d33429]"></span>
+              <span>Legacy Trouble</span>
+            </div>
+            <div class="flex items-center gap-2 font-semibold">
+              <span class="w-5 h-5 border-2 border-black rounded bg-white"></span>
+              <span>Neutral</span>
+            </div>
+          </div>
         </div>
       </header>
 
       <main>
         <section class="bg-white/70 rounded-3xl p-4 shadow-xl border border-black/10">
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-            <div class="text-sm font-semibold text-slate-800" id="turn-count">Turn: 0</div>
-            <button
-              id="roll-button"
-              class="px-6 py-2 rounded-full bg-slate-900 text-white font-semibold shadow-md transition disabled:opacity-60 disabled:cursor-not-allowed hover:-translate-y-0.5"
-            >
-              Roll Dice
-            </button>
-            <div class="text-sm font-semibold text-slate-800" id="status-text">Status: Ready</div>
+          <div class="grid grid-cols-3 items-center gap-3 mb-3">
+            <div class="flex items-center justify-center gap-3">
+              <div class="flex flex-col items-center">
+                <div class="text-4xl font-bold text-slate-900" id="turn-count">0</div>
+                <div class="text-xs tracking-[0.3em] text-slate-600">TURN</div>
+              </div>
+            </div>
+            <div class="flex items-center justify-center">
+              <button
+                id="roll-button"
+                class="px-8 py-3 rounded-full bg-slate-900 text-white font-semibold shadow-md transition disabled:opacity-60 disabled:cursor-not-allowed hover:-translate-y-0.5"
+              >
+                Roll Dice
+              </button>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="text-3xl font-bold text-slate-900" id="steps-left">0</div>
+              <div class="text-xs tracking-[0.25em] text-slate-600">STEPS LEFT</div>
+            </div>
+          </div>
+          <div class="text-sm font-semibold text-slate-800 text-center mb-3" id="status-text">
+            Ready
           </div>
           <div id="game-root" class="w-full h-[78vh] min-h-[560px] max-h-[900px]"></div>
         </section>
