@@ -239,6 +239,8 @@ function createGame(data) {
     }
     this.boardGraphics = this.add.graphics();
     this.boardGraphics.setDepth(1);
+    this.decorGraphics = this.add.graphics();
+    this.decorGraphics.setDepth(2);
     this.labels = [];
     this.positions = [];
 
@@ -549,14 +551,16 @@ function createGame(data) {
     const bounds = camera.bounds;
     const fallbackWidth = gameState?.worldWidth || camera.width;
     const fallbackHeight = gameState?.worldHeight || camera.height;
-    const minX = bounds ? bounds.x : 0;
+    const fallbackX = gameState?.worldOffsetX || 0;
+    const fallbackY = gameState?.worldOffsetY || 0;
+    const minX = bounds ? bounds.x : fallbackX;
     const maxX = bounds
       ? Math.max(bounds.x, bounds.x + bounds.width - camera.width)
-      : Math.max(0, fallbackWidth - camera.width);
-    const minY = bounds ? bounds.y : 0;
+      : Math.max(fallbackX, fallbackX + fallbackWidth - camera.width);
+    const minY = bounds ? bounds.y : fallbackY;
     const maxY = bounds
       ? Math.max(bounds.y, bounds.y + bounds.height - camera.height)
-      : Math.max(0, fallbackHeight - camera.height);
+      : Math.max(fallbackY, fallbackY + fallbackHeight - camera.height);
     const desiredX = Phaser.Math.Clamp(target.x - camera.width / 2, minX, maxX);
     const desiredY = Phaser.Math.Clamp(target.y - camera.height / 2, minY, maxY);
     return { x: desiredX, y: desiredY };
@@ -588,10 +592,16 @@ function createGame(data) {
     const shiftY = padding - minY;
     const worldWidth = maxX + shiftX + padding;
     const worldHeight = maxY + shiftY + padding;
-    gameState.worldWidth = worldWidth;
-    gameState.worldHeight = worldHeight;
+    const cameraPad = tileSize * 2.2;
+    gameState.worldWidth = worldWidth + cameraPad * 2;
+    gameState.worldHeight = worldHeight + cameraPad * 2;
+    gameState.worldOffsetX = -cameraPad;
+    gameState.worldOffsetY = -cameraPad;
 
     scene.boardGraphics.clear();
+    if (scene.decorGraphics) {
+      scene.decorGraphics.clear();
+    }
     scene.labels.forEach((label) => label.destroy());
     scene.labels = [];
     scene.positions = [];
@@ -641,7 +651,7 @@ function createGame(data) {
 
     const camera = scene.cameras.main;
     if (camera) {
-      camera.setBounds(0, 0, worldWidth, worldHeight);
+      camera.setBounds(gameState.worldOffsetX, gameState.worldOffsetY, gameState.worldWidth, gameState.worldHeight);
     }
     const currentPos = scene.positions[gameState.currentIndex];
     if (currentPos && camera) {
@@ -655,6 +665,47 @@ function createGame(data) {
 
     if (scene.cardOverlay) {
       scene.cardOverlay.setPosition(width / 2, height / 2);
+    }
+
+    drawDecorations(scene, tileSize);
+  }
+
+  function drawDecorations(scene, tileSize) {
+    if (!scene.decorGraphics || scene.positions.length === 0) return;
+    const g = scene.decorGraphics;
+    const startPos = scene.positions[0];
+    const endPos = scene.positions[scene.positions.length - 1];
+
+    // Start decoration removed per request.
+
+    if (endPos) {
+      const balloonBaseX = endPos.x - tileSize * 0.3;
+      const balloonBaseY = endPos.y - tileSize * 1.25;
+      const colors = [0xd33429, 0xabd4ce, 0x78b5b0];
+      colors.forEach((color, idx) => {
+        const offsetX = (idx - 1) * tileSize * 0.22;
+        const offsetY = idx * tileSize * -0.05;
+        g.lineStyle(2, 0x111111, 1);
+        g.fillStyle(color, 1);
+        g.fillEllipse(
+          balloonBaseX + offsetX,
+          balloonBaseY + offsetY,
+          tileSize * 0.28,
+          tileSize * 0.34
+        );
+        g.strokeEllipse(
+          balloonBaseX + offsetX,
+          balloonBaseY + offsetY,
+          tileSize * 0.28,
+          tileSize * 0.34
+        );
+        g.lineBetween(
+          balloonBaseX + offsetX,
+          balloonBaseY + offsetY + tileSize * 0.18,
+          endPos.x - tileSize * 0.1,
+          endPos.y - tileSize * 0.1
+        );
+      });
     }
   }
 
@@ -688,9 +739,20 @@ function createGame(data) {
       if (gameScene?.cameras?.main) {
         const camera = gameScene.cameras.main;
         if (!camera.bounds || !camera.bounds.width) {
-          camera.setBounds(0, 0, gameState.worldWidth || camera.width, gameState.worldHeight || camera.height);
+          const w = gameState.worldWidth || camera.width;
+          const h = gameState.worldHeight || camera.height;
+          const x = gameState.worldOffsetX || 0;
+          const y = gameState.worldOffsetY || 0;
+          camera.setBounds(x, y, w, h);
         }
-        const targetPos = gameScene.positions[targetIndex];
+        let targetPos = gameScene.positions[targetIndex];
+        if (targetPos && targetIndex >= gameState.totalSpaces - 1 && gameScene.decorGraphics) {
+          const tile = gameState.tileSize || 100;
+          targetPos = {
+            x: targetPos.x + tile * 0.25,
+            y: targetPos.y - tile * 0.6,
+          };
+        }
         if (targetPos) {
           const scroll = getCameraScrollFor(targetPos, camera);
           gameScene.tweens.add({
