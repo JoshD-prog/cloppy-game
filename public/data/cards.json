@@ -1,0 +1,76 @@
+{
+  "good": {
+    "go_to_end": [
+      {
+        "title": "Blazingly Fast",
+        "description": "\"Blazingly fast\" - your code and configuration all just worked. You've made it to live before lunch (go to end)."
+      }
+    ],
+    "roll_forward": [
+      {
+        "title": "Auto Promotion",
+        "description": "You automatically promoted from the develop to QA environment."
+      }
+    ],
+    "extra_turn": [
+      {
+        "title": "Change Request, Automated",
+        "description": "You automatically created a change request."
+      },
+      {
+        "title": "Feature Branch Proof",
+        "description": "You were able to test deploy your changes from a feature branch."
+      }
+    ],
+    "jump_forward": [
+      {
+        "title": "Auto Permissions (Your Team)",
+        "description": "You got automatic permissions to a resource your team owns."
+      },
+      {
+        "title": "Auto Permissions (Cross-Team)",
+        "description": "You got automated permissions for a resource another team owns."
+      }
+    ],
+    "generic": [
+      {
+        "title": "Streamlined Pipeline",
+        "description": "The modern pipeline eliminates friction. Move forward."
+      }
+    ]
+  },
+  "bad": {
+    "go_to_start": [
+      {
+        "title": "Privilege Breach",
+        "description": "A hacker gained access to a role with a lot of access, and captured PII (back to start)."
+      }
+    ],
+    "lose_turn": [
+      {
+        "title": "Config Drift Day",
+        "description": "The higher environment has different configuration than the lower environment, you lose a day testing."
+      }
+    ],
+    "go_back": [
+      {
+        "title": "Manual Role Grind",
+        "description": "You work with security to manually create your security role."
+      },
+      {
+        "title": "Mismatched Methods",
+        "description": "You offer to help another team finish a project, but their deployment methodology is totally different from yours so you aren't able to help."
+      },
+      {
+        "title": "Sabbatical Script",
+        "description": "Your team's custom build script isn't working, and the person who built it is on sabatical."
+      }
+    ],
+    "generic": [
+      {
+        "title": "Legacy Drag",
+        "description": "The legacy environment slows you down. Move back."
+      }
+    ]
+  }
+}

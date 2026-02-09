@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cloppy Cloud Quest</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Tech Expo Board Game</p>
+          <h1>Cloppy Cloud Quest</h1>
+          <p class="subtitle">
+            Guide Cloppy through the modern deployment pipeline. Good spaces accelerate the
+            journey. Bad spaces recreate legacy pain points.
+          </p>
+        </div>
+        <div class="legend">
+          <div class="legend-item">
+            <span class="swatch good"></span>
+            <span>Modern Win</span>
+          </div>
+          <div class="legend-item">
+            <span class="swatch bad"></span>
+            <span>Legacy Trouble</span>
+          </div>
+          <div class="legend-item">
+            <span class="swatch neutral"></span>
+            <span>Neutral</span>
+          </div>
+          <details class="howto">
+            <summary>How To Play</summary>
+            <ul>
+              <li>Roll to move Cloppy along the pipeline.</li>
+              <li>Landing on a colored space triggers a card.</li>
+              <li>Reach the end to ship to the secure environment.</li>
+            </ul>
+          </details>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="board">
+          <div id="game-root"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="card-modal" class="card-modal hidden">
+      <div class="card">
+        <p id="card-type" class="card-type"></p>
+        <h3 id="card-title"></h3>
+        <p id="card-description"></p>
+        <p id="card-effect" class="card-effect"></p>
+        <button id="card-close">Continue</button>
+      </div>
+    </div>
+
+    <div id="win-modal" class="card-modal hidden">
+      <div class="card win">
+        <p class="card-type">Deployment Complete</p>
+        <h3>Cloppy Ships Securely</h3>
+        <p>The modern pipeline carried you to the secure environment. Great work!</p>
+        <button id="restart">Play Again</button>
+      </div>
+    </div>
+
+    <footer class="variant-footer">
+      <span id="variant-name" class="sr-only">Loading...</span>
+    </footer>
+
+    <script src="game.js"></script>
+  </body>
+</html>
