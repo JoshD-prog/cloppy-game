@@ -238,7 +238,7 @@ function createGame(data) {
       pixelArt: false,
       roundPixels: false,
     },
-    resolution: Math.min(window.devicePixelRatio || 1, 2),
+    resolution: Math.min(window.devicePixelRatio || 1, 3),
     scale: {
       mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.NO_CENTER,
@@ -270,10 +270,10 @@ function createGame(data) {
       dc.style.width = "100%";
       dc.style.height = "100%";
     }
+    this.decorGraphics = this.add.graphics();
+    this.decorGraphics.setDepth(0);
     this.boardGraphics = this.add.graphics();
     this.boardGraphics.setDepth(1);
-    this.decorGraphics = this.add.graphics();
-    this.decorGraphics.setDepth(2);
     this.labels = [];
     this.positions = [];
 
@@ -533,6 +533,10 @@ function createGame(data) {
     scene.labels = [];
     scene.positions = [];
 
+    const shadowOffset = tileSize * 0.06;
+    const shadowAlpha = 0.18;
+    const cornerRadius = Math.round(tileSize * 0.12);
+
     for (let i = 0; i < totalSpaces; i += 1) {
       const centerX = rawPositions[i].x + shiftX;
       const centerY = rawPositions[i].y + shiftY;
@@ -543,10 +547,21 @@ function createGame(data) {
       const color =
         spaceType === "good" ? GOOD_COLOR : spaceType === "bad" ? BAD_COLOR : NEUTRAL_COLOR;
 
+      if (scene.decorGraphics) {
+        scene.decorGraphics.fillStyle(0x000000, shadowAlpha);
+        scene.decorGraphics.fillRoundedRect(
+          x + shadowOffset,
+          y + shadowOffset,
+          tileSize,
+          tileSize,
+          cornerRadius
+        );
+      }
+
       scene.boardGraphics.lineStyle(3, OUTLINE_COLOR, 1);
       scene.boardGraphics.fillStyle(color, 1);
-      scene.boardGraphics.fillRoundedRect(x, y, tileSize, tileSize, 12);
-      scene.boardGraphics.strokeRoundedRect(x, y, tileSize, tileSize, 12);
+      scene.boardGraphics.fillRoundedRect(x, y, tileSize, tileSize, cornerRadius);
+      scene.boardGraphics.strokeRoundedRect(x, y, tileSize, tileSize, cornerRadius);
 
       const labelText = i === 0 ? "START" : i === totalSpaces - 1 ? "DEPLOYED" : `${i + 1}`;
       const label = scene.add.text(centerX, centerY, labelText, {
