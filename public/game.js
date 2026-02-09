@@ -5,7 +5,6 @@ const OUTLINE_COLOR = 0x000000;
 
 const rollButton = document.getElementById("roll-button");
 const turnCountEl = document.getElementById("turn-count");
-const lastRollEl = document.getElementById("last-roll");
 const statusEl = document.getElementById("status-text");
 const variantNameEl = document.getElementById("variant-name");
 
@@ -98,26 +97,11 @@ function describeEffect(card) {
 }
 
 function updateStatus(text) {
-  if (statusEl) statusEl.textContent = text;
-  if (gameScene?.hud?.statusText) {
-    gameScene.hud.statusText.setText(`Status: ${text}`);
-  }
+  if (statusEl) statusEl.textContent = `Status: ${text}`;
 }
 
 function setCanRoll(canRoll) {
   if (rollButton) rollButton.disabled = !canRoll;
-  if (gameScene?.hud?.rollButton) {
-    const button = gameScene.hud.rollButton;
-    button.background.setFillStyle(canRoll ? 0x111111 : 0x444444, 1);
-    button.label.setAlpha(canRoll ? 1 : 0.65);
-    button.background.disableInteractive();
-    if (canRoll) {
-      button.background.setInteractive(
-        new Phaser.Geom.Rectangle(-button.width / 2, -button.height / 2, button.width, button.height),
-        Phaser.Geom.Rectangle.Contains
-      );
-    }
-  }
 }
 
 function showCardModal(type, cardText, card) {
@@ -259,11 +243,9 @@ function createGame(data) {
     this.cardOverlay.setDepth(10);
     this.cardOverlay.setVisible(false);
 
-    this.hud = buildHud(this);
-    this.hud.setDepth(8);
-
     drawBoard(this);
 
+    if (turnCountEl) turnCountEl.textContent = "Turn: 0";
     updateStatus("Ready to roll");
     setCanRoll(true);
   }
@@ -279,27 +261,17 @@ function createGame(data) {
     if (gameState.skipNextTurn) {
       gameState.skipNextTurn = false;
       gameState.turnCount += 1;
-      if (turnCountEl) turnCountEl.textContent = gameState.turnCount;
-      if (gameScene?.hud?.turnText) {
-        gameScene.hud.turnText.setText(`Turn: ${gameState.turnCount}`);
-      }
+      if (turnCountEl) turnCountEl.textContent = `Turn: ${gameState.turnCount}`;
       updateStatus("Turn skipped due to legacy slowdown.");
       setCanRoll(true);
       return;
     }
 
     gameState.turnCount += 1;
-    if (turnCountEl) turnCountEl.textContent = gameState.turnCount;
-    if (gameScene?.hud?.turnText) {
-      gameScene.hud.turnText.setText(`Turn: ${gameState.turnCount}`);
-    }
+    if (turnCountEl) turnCountEl.textContent = `Turn: ${gameState.turnCount}`;
 
     const roll = await rollDieAnimated();
     gameState.lastRoll = roll;
-    if (lastRollEl) lastRollEl.textContent = roll;
-    if (gameScene?.hud?.lastRollText) {
-      gameScene.hud.lastRollText.setText(`Last Roll: ${roll}`);
-    }
 
     updateStatus(`Rolled ${roll}. Moving forward.`);
     setCanRoll(false);
@@ -359,10 +331,6 @@ function createGame(data) {
       case "roll_forward":
         updateStatus("Auto-promotion! Rolling forward.");
         const roll = rollDie();
-        if (lastRollEl) lastRollEl.textContent = roll;
-        if (gameScene?.hud?.lastRollText) {
-          gameScene.hud.lastRollText.setText(`Last Roll: ${roll}`);
-        }
         await moveToIndex(Math.min(gameState.currentIndex + roll, totalSpaces - 1));
         if (gameState.currentIndex >= totalSpaces - 1) {
           updateStatus("Arrived in the secure environment!");
@@ -396,74 +364,6 @@ function createGame(data) {
 
   function rollDie() {
     return Math.floor(Math.random() * 6) + 1;
-  }
-
-  function buildHud(scene) {
-    const hud = scene.add.container(0, 0);
-
-    const panelWidth = Math.min(280, scene.scale.width * 0.32);
-    const panelHeight = 170;
-    const panel = scene.add.rectangle(0, 0, panelWidth, panelHeight, 0xffffff, 0.78);
-    panel.setStrokeStyle(2, 0x000000, 0.15);
-
-    const turnText = scene.add.text(0, -55, "Turn: 0", {
-      fontFamily: "Space Grotesk",
-      fontSize: 16,
-      color: "#111111",
-      fontStyle: "bold",
-    });
-    turnText.setOrigin(0.5);
-
-    const lastRollText = scene.add.text(0, -28, "Last Roll: -", {
-      fontFamily: "Space Grotesk",
-      fontSize: 16,
-      color: "#111111",
-      fontStyle: "bold",
-    });
-    lastRollText.setOrigin(0.5);
-
-    const statusText = scene.add.text(0, 6, "Status: Ready", {
-      fontFamily: "Space Grotesk",
-      fontSize: 14,
-      color: "#1f2e2c",
-      align: "center",
-      wordWrap: { width: panelWidth * 0.9 },
-    });
-    statusText.setOrigin(0.5);
-
-    const buttonWidth = panelWidth * 0.82;
-    const buttonHeight = 44;
-    const buttonBg = scene.add.rectangle(0, 60, buttonWidth, buttonHeight, 0x111111, 1);
-    const buttonLabel = scene.add.text(0, 60, "Roll Dice", {
-      fontFamily: "Space Grotesk",
-      fontSize: 16,
-      color: "#ffffff",
-      fontStyle: "bold",
-    });
-    buttonLabel.setOrigin(0.5);
-
-    hud.add([panel, turnText, lastRollText, statusText, buttonBg, buttonLabel]);
-
-    hud.panel = panel;
-    hud.turnText = turnText;
-    hud.lastRollText = lastRollText;
-    hud.statusText = statusText;
-    hud.rollButton = {
-      background: buttonBg,
-      label: buttonLabel,
-      width: buttonWidth,
-      height: buttonHeight,
-    };
-
-    buttonBg.setInteractive(
-      new Phaser.Geom.Rectangle(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight),
-      Phaser.Geom.Rectangle.Contains
-    );
-    buttonBg.on("pointerdown", handleRoll);
-    buttonLabel.setInteractive();
-    buttonLabel.on("pointerdown", handleRoll);
-
-    return hud;
   }
 
   function buildCardOverlay(scene) {
@@ -680,12 +580,6 @@ function createGame(data) {
 
     if (scene.cardOverlay) {
       scene.cardOverlay.setPosition(width / 2, height / 2);
-    }
-
-    if (scene.hud) {
-      const hudX = width - 160;
-      const hudY = Math.max(140, height * 0.2);
-      scene.hud.setPosition(hudX, hudY);
     }
   }
 
