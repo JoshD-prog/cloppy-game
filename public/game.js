@@ -213,6 +213,7 @@ function createGame(data) {
     lastRoll: null,
     skipNextTurn: false,
     extraTurn: false,
+    isRolling: false,
     goodDeck: {
       original: buildDeck(variant.good_deck.cards),
       deck: [],
@@ -229,7 +230,8 @@ function createGame(data) {
   const config = {
     type: Phaser.AUTO,
     parent: "game-root",
-    backgroundColor: "#fdfcf9",
+    transparent: true,
+    backgroundColor: "rgba(0,0,0,0)",
     dom: {
       createContainer: true,
     },
@@ -238,7 +240,7 @@ function createGame(data) {
       pixelArt: false,
       roundPixels: false,
     },
-    resolution: Math.min(window.devicePixelRatio || 1, 3),
+    resolution: Math.min(window.devicePixelRatio || 1, 4),
     scale: {
       mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.NO_CENTER,
@@ -288,6 +290,7 @@ function createGame(data) {
 
     // Dice and cards are HTML elements over the canvas.
 
+    applyHiDPI(this, this.scale.width, this.scale.height);
     drawBoard(this);
 
     if (turnCountEl) turnCountEl.textContent = "0";
@@ -298,33 +301,40 @@ function createGame(data) {
 
   function resize(gameSize) {
     if (!gameScene) return;
+    applyHiDPI(gameScene, gameSize.width, gameSize.height);
     drawBoard(gameScene, gameSize.width, gameSize.height);
   }
 
   async function handleRoll() {
     if (!gameScene || !gameState) return;
-
-    if (gameState.skipNextTurn) {
-      gameState.skipNextTurn = false;
-      gameState.turnCount += 1;
-      if (turnCountEl) turnCountEl.textContent = `${gameState.turnCount}`;
-      updateStatus("Turn skipped due to legacy slowdown.");
-      setCanRoll(true);
-      return;
-    }
-
-    gameState.turnCount += 1;
-    if (turnCountEl) turnCountEl.textContent = `${gameState.turnCount}`;
-
-    const roll = await rollDieAnimated();
-    gameState.lastRoll = roll;
-
-    updateStatus(`Rolled ${roll}. Moving forward.`);
+    if (gameState.isRolling) return;
+    gameState.isRolling = true;
     setCanRoll(false);
 
-    const targetIndex = Math.min(gameState.currentIndex + roll, totalSpaces - 1);
-    await moveToIndex(targetIndex);
-    await resolveSpace();
+    try {
+      if (gameState.skipNextTurn) {
+        gameState.skipNextTurn = false;
+        gameState.turnCount += 1;
+        if (turnCountEl) turnCountEl.textContent = `${gameState.turnCount}`;
+        updateStatus("Turn skipped due to legacy slowdown.");
+        setCanRoll(true);
+        return;
+      }
+
+      gameState.turnCount += 1;
+      if (turnCountEl) turnCountEl.textContent = `${gameState.turnCount}`;
+
+      const roll = await rollDieAnimated();
+      gameState.lastRoll = roll;
+
+      updateStatus(`Rolled ${roll}. Moving forward.`);
+
+      const targetIndex = Math.min(gameState.currentIndex + roll, totalSpaces - 1);
+      await moveToIndex(targetIndex);
+      await resolveSpace();
+    } finally {
+      gameState.isRolling = false;
+    }
   }
 
   if (rollButton) rollButton.addEventListener("click", handleRoll);
@@ -418,6 +428,7 @@ function createGame(data) {
 
     const spins = 10;
     let count = 0;
+    let finalLocked = false;
 
     return new Promise((resolve) => {
       const diceSize = Math.max(90, Math.min(160, gameScene.scale.width * 0.18));
@@ -448,11 +459,16 @@ function createGame(data) {
         count += 1;
         const temp = rollDie();
         diceValueEl.textContent = `${temp}`;
-        if (count >= spins) {
+        if (count >= spins && !finalLocked) {
+          finalLocked = true;
           diceValueEl.textContent = `${finalValue}`;
+          wiggle.cancel();
+          diceBoxEl.style.transform = "scale(1) rotate(0deg)";
+          clearInterval(interval);
         }
       }, 70);
 
+      const holdMs = 350;
       setTimeout(() => {
         clearInterval(interval);
         wiggle.cancel();
@@ -467,8 +483,36 @@ function createGame(data) {
           diceOverlayEl.style.display = "none";
         };
         resolve(finalValue);
-      }, 70 * (spins + 1) + 50);
+      }, 70 * (spins + 1) + 50 + holdMs);
     });
+  }
+
+  function applyHiDPI(scene, width, height) {
+    if (!scene?.sys?.game) return;
+    const game = scene.sys.game;
+    const renderer = game.renderer;
+    const canvas = game.canvas;
+    const dpr = Math.min(window.devicePixelRatio || 1, 4);
+
+    if (renderer) {
+      if (renderer.resolution !== dpr) {
+        renderer.resolution = dpr;
+      }
+      renderer.resize(width, height);
+    } else if (canvas) {
+      const nextWidth = Math.floor(width * dpr);
+      const nextHeight = Math.floor(height * dpr);
+      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+      }
+    }
+
+    if (canvas) {
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    }
+    game.config.resolution = dpr;
   }
 
   function getCameraScrollFor(target, camera) {
@@ -492,7 +536,7 @@ function createGame(data) {
   }
 
   function drawBoard(scene, width = scene.scale.width, height = scene.scale.height) {
-    const tileSize = Math.max(90, Math.min(140, height * 0.22));
+    const tileSize = Math.round(Math.max(90, Math.min(140, height * 0.22)));
     const stepRun = tileSize * 1.12;
     const stepRise = tileSize * 0.25;
     const padding = tileSize * 0.9;
@@ -533,9 +577,9 @@ function createGame(data) {
     scene.labels = [];
     scene.positions = [];
 
-    const shadowOffset = tileSize * 0.06;
-    const shadowAlpha = 0.18;
-    const cornerRadius = Math.round(tileSize * 0.12);
+    const shadowOffset = tileSize * 0.05;
+    const shadowAlpha = 0.12;
+    const cornerRadius = Math.round(tileSize * 0.14);
 
     for (let i = 0; i < totalSpaces; i += 1) {
       const centerX = rawPositions[i].x + shiftX;
@@ -558,7 +602,7 @@ function createGame(data) {
         );
       }
 
-      scene.boardGraphics.lineStyle(3, OUTLINE_COLOR, 1);
+      scene.boardGraphics.lineStyle(4, OUTLINE_COLOR, 1);
       scene.boardGraphics.fillStyle(color, 1);
       scene.boardGraphics.fillRoundedRect(x, y, tileSize, tileSize, cornerRadius);
       scene.boardGraphics.strokeRoundedRect(x, y, tileSize, tileSize, cornerRadius);
