@@ -75,7 +75,46 @@
           <div class="text-sm font-semibold text-slate-800 text-center mb-3" id="status-text">
             Ready
           </div>
-          <div id="game-root" class="w-full h-[78vh] min-h-[560px] max-h-[900px]"></div>
+          <div id="game-root" class="relative overflow-hidden w-full h-[78vh] min-h-[560px] max-h-[900px]">
+            <div
+              id="dice-overlay"
+              class="absolute inset-0 hidden items-center justify-center pointer-events-none z-20"
+            >
+              <div
+                id="dice-box"
+                class="flex items-center justify-center w-24 h-24 rounded-2xl border-4 border-black bg-white shadow-2xl"
+              >
+                <span id="dice-value" class="font-['Bungee'] text-4xl text-slate-900">-</span>
+              </div>
+            </div>
+            <div
+              id="card-overlay"
+              class="absolute inset-0 hidden items-center justify-center bg-black/40 z-30"
+            >
+              <div
+                id="card-panel"
+                class="pointer-events-auto flex flex-col items-center text-center bg-white border-[3px] border-black rounded-2xl shadow-2xl px-7 py-6 gap-2 max-w-md w-[72%]"
+              >
+                <div id="card-accent" class="h-2 w-3/4 rounded-full bg-[#abd4ce]"></div>
+                <div id="card-type" class="text-xs font-semibold tracking-[0.2em]">
+                  Modern Advantage
+                </div>
+                <div id="card-title" class="font-['Bungee'] text-xl text-slate-900">Card Title</div>
+                <div id="card-description" class="text-sm text-slate-700">
+                  Card description goes here.
+                </div>
+                <div id="card-effect" class="text-sm font-semibold text-slate-900">
+                  Effect: Move forward.
+                </div>
+                <button
+                  id="card-close"
+                  class="mt-2 rounded-full bg-slate-900 text-white font-semibold px-6 py-2"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
     </div>

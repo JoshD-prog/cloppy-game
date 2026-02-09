@@ -8,6 +8,17 @@ const turnCountEl = document.getElementById("turn-count");
 const statusEl = document.getElementById("status-text");
 const variantNameEl = document.getElementById("variant-name");
 const stepsLeftEl = document.getElementById("steps-left");
+const diceOverlayEl = document.getElementById("dice-overlay");
+const diceBoxEl = document.getElementById("dice-box");
+const diceValueEl = document.getElementById("dice-value");
+const cardOverlayEl = document.getElementById("card-overlay");
+const cardPanelEl = document.getElementById("card-panel");
+const cardAccentEl = document.getElementById("card-accent");
+const cardTypeEl = document.getElementById("card-type");
+const cardTitleEl = document.getElementById("card-title");
+const cardDescEl = document.getElementById("card-description");
+const cardEffectEl = document.getElementById("card-effect");
+const cardCloseEl = document.getElementById("card-close");
 
 const winModal = document.getElementById("win-modal");
 const restartButton = document.getElementById("restart");
@@ -112,35 +123,26 @@ function setCanRoll(canRoll) {
 }
 
 function showCardModal(type, cardText, card) {
-  if (!gameScene || !gameScene.cardOverlay) return Promise.resolve();
+  if (!cardOverlayEl || !cardPanelEl) return Promise.resolve();
 
-  const overlay = gameScene.cardOverlay;
-  overlay.setVisible(true);
-  overlay.setAlpha(0);
-  overlay.setScale(0.2);
-  overlay.angle = -12;
-  overlay.isClosing = false;
+  cardTypeEl.textContent = type === "good" ? "Modern Advantage" : "Legacy Setback";
+  cardTitleEl.textContent = cardText.title;
+  cardDescEl.textContent = cardText.description;
+  cardEffectEl.textContent = describeEffect(card);
+  cardAccentEl.style.background = type === "good" ? "#abd4ce" : "#d33429";
 
-  overlay.typeText.setText(type === "good" ? "Modern Advantage" : "Legacy Setback");
-  overlay.titleText.setText(cardText.title);
-  overlay.descText.setText(cardText.description);
-  overlay.effectText.setText(describeEffect(card));
-  overlay.accent.setFillStyle(type === "good" ? GOOD_COLOR : BAD_COLOR, 1);
+  cardOverlayEl.classList.remove("hidden");
+  cardOverlayEl.style.display = "flex";
+  cardOverlayEl.style.pointerEvents = "auto";
+  cardOverlayEl.dataset.closing = "false";
 
-  gameScene.tweens.add({
-    targets: overlay,
-    alpha: 1,
-    scale: 1,
-    angle: 0,
-    duration: 260,
-    ease: "Back.easeOut",
-  });
-
-  if (gameScene?.input) {
-    gameScene.time.delayedCall(60, () => {
-      gameScene.input.once("pointerdown", closeCardModal);
-    });
-  }
+  cardPanelEl.animate(
+    [
+      { transform: "scale(0.2) rotate(-12deg)", opacity: 0 },
+      { transform: "scale(1) rotate(0deg)", opacity: 1 },
+    ],
+    { duration: 260, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)", fill: "forwards" }
+  );
 
   return new Promise((resolve) => {
     cardResolve = resolve;
@@ -148,26 +150,27 @@ function showCardModal(type, cardText, card) {
 }
 
 function closeCardModal() {
-  if (!gameScene || !gameScene.cardOverlay) return;
-  const overlay = gameScene.cardOverlay;
-  if (overlay.isClosing) return;
-  overlay.isClosing = true;
-  gameScene.tweens.add({
-    targets: overlay,
-    alpha: 0,
-    scale: 0.8,
-    angle: 8,
-    duration: 180,
-    ease: "Back.easeIn",
-    onComplete: () => {
-      overlay.setVisible(false);
-      overlay.isClosing = false;
-      if (cardResolve) {
-        cardResolve();
-        cardResolve = null;
-      }
-    },
-  });
+  if (!cardOverlayEl || !cardPanelEl) return;
+  if (cardOverlayEl.dataset.closing === "true") return;
+  cardOverlayEl.dataset.closing = "true";
+
+  const anim = cardPanelEl.animate(
+    [
+      { transform: "scale(1) rotate(0deg)", opacity: 1 },
+      { transform: "scale(0.8) rotate(8deg)", opacity: 0 },
+    ],
+    { duration: 180, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" }
+  );
+
+  anim.onfinish = () => {
+    cardOverlayEl.classList.add("hidden");
+    cardOverlayEl.style.display = "none";
+    cardOverlayEl.dataset.closing = "false";
+    if (cardResolve) {
+      cardResolve();
+      cardResolve = null;
+    }
+  };
 }
 
 function showWin() {
@@ -178,6 +181,20 @@ restartButton.addEventListener("click", () => {
   winModal.classList.add("hidden");
   window.location.reload();
 });
+
+if (cardCloseEl) {
+  cardCloseEl.addEventListener("click", (event) => {
+    event.stopPropagation();
+    closeCardModal();
+  });
+}
+if (cardOverlayEl) {
+  cardOverlayEl.addEventListener("click", (event) => {
+    if (event.target === cardOverlayEl) {
+      closeCardModal();
+    }
+  });
+}
 
 function createGame(data) {
   const { variant, cards } = data;
@@ -213,9 +230,18 @@ function createGame(data) {
     type: Phaser.AUTO,
     parent: "game-root",
     backgroundColor: "#fdfcf9",
+    dom: {
+      createContainer: true,
+    },
+    render: {
+      antialias: true,
+      pixelArt: false,
+      roundPixels: false,
+    },
+    resolution: Math.min(window.devicePixelRatio || 1, 2),
     scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
+      mode: Phaser.Scale.RESIZE,
+      autoCenter: Phaser.Scale.NO_CENTER,
       width: 1100,
       height: 720,
     },
@@ -229,13 +255,20 @@ function createGame(data) {
   new Phaser.Game(config);
 
   function preload() {
-    this.load.svg("cloppy", "Cloppy.svg", { width: 1200, height: 1200 });
+    // Cloppy is rendered as a live SVG DOM element for crisp edges.
   }
 
   function create() {
     gameScene = this;
-    if (this.cameras?.main) {
-      this.cameras.main.roundPixels = true;
+    if (this.sys?.domContainer) {
+      const dc = this.sys.domContainer;
+      dc.style.pointerEvents = "auto";
+      dc.style.zIndex = "2";
+      dc.style.position = "absolute";
+      dc.style.top = "0";
+      dc.style.left = "0";
+      dc.style.width = "100%";
+      dc.style.height = "100%";
     }
     this.boardGraphics = this.add.graphics();
     this.boardGraphics.setDepth(1);
@@ -244,28 +277,16 @@ function createGame(data) {
     this.labels = [];
     this.positions = [];
 
-    this.cloppy = this.add.image(0, 0, "cloppy");
+    this.cloppy = this.add.dom(0, 0, "img");
     this.cloppy.setOrigin(0.5, 0.9);
     this.cloppy.setDepth(4);
+    this.cloppy.setScrollFactor(1);
+    this.cloppy.node.src = "Cloppy.svg";
+    this.cloppy.node.alt = "Cloppy";
+    this.cloppy.node.style.pointerEvents = "none";
+    this.cloppy.node.style.imageRendering = "auto";
 
-    this.diceGroup = this.add.container(0, 0);
-    this.diceGroup.setDepth(6);
-    this.diceBox = this.add.rectangle(0, 0, 56, 56, 0xffffff, 1);
-    this.diceBox.setStrokeStyle(3, 0x000000, 1);
-    this.diceText = this.add.text(0, 0, "-", {
-      fontFamily: "Bungee",
-      fontSize: 28,
-      color: "#111111",
-    });
-    this.diceText.setOrigin(0.5);
-    this.diceGroup.add([this.diceBox, this.diceText]);
-    this.diceGroup.setVisible(false);
-    this.diceGroup.setScrollFactor(0);
-
-    this.cardOverlay = buildCardOverlay(this);
-    this.cardOverlay.setDepth(10);
-    this.cardOverlay.setVisible(false);
-    this.cardOverlay.setScrollFactor(0);
+    // Dice and cards are HTML elements over the canvas.
 
     drawBoard(this);
 
@@ -391,158 +412,62 @@ function createGame(data) {
     return Math.floor(Math.random() * 6) + 1;
   }
 
-  function buildCardOverlay(scene) {
-    const overlay = scene.add.container(scene.scale.width / 2, scene.scale.height / 2);
-
-    const cardWidth = Math.min(420, scene.scale.width * 0.7);
-    const cardHeight = Math.min(540, scene.scale.height * 0.78);
-
-    const shadow = scene.add.rectangle(8, 12, cardWidth, cardHeight, 0x000000, 0.2);
-    shadow.setStrokeStyle(0);
-
-    const cardBg = scene.add.rectangle(0, 0, cardWidth, cardHeight, 0xffffff, 1);
-    cardBg.setStrokeStyle(3, 0x000000, 1);
-    cardBg.setInteractive({ useHandCursor: true });
-
-    const accent = scene.add.rectangle(0, -cardHeight * 0.38, cardWidth * 0.78, 12, GOOD_COLOR, 1);
-
-    const typeText = scene.add.text(0, -cardHeight * 0.34, "Modern Advantage", {
-      fontFamily: "Space Grotesk",
-      fontSize: 14,
-      color: "#111111",
-      fontStyle: "bold",
-      align: "center",
-    });
-    typeText.setOrigin(0.5);
-
-    const titleText = scene.add.text(0, -cardHeight * 0.22, "Card Title", {
-      fontFamily: "Bungee",
-      fontSize: 22,
-      color: "#111111",
-      align: "center",
-      wordWrap: { width: cardWidth * 0.75 },
-    });
-    titleText.setOrigin(0.5);
-
-    const descText = scene.add.text(0, -cardHeight * 0.02, "Card description goes here.", {
-      fontFamily: "Space Grotesk",
-      fontSize: 16,
-      color: "#1f2e2c",
-      align: "center",
-      wordWrap: { width: cardWidth * 0.78 },
-    });
-    descText.setOrigin(0.5);
-
-    const effectText = scene.add.text(0, cardHeight * 0.22, "Effect: Move forward.", {
-      fontFamily: "Space Grotesk",
-      fontSize: 16,
-      color: "#111111",
-      fontStyle: "bold",
-      align: "center",
-      wordWrap: { width: cardWidth * 0.75 },
-    });
-    effectText.setOrigin(0.5);
-
-    const buttonBg = scene.add.rectangle(0, cardHeight * 0.37, cardWidth * 0.55, 48, 0x111111, 1);
-    buttonBg.setStrokeStyle(0);
-    buttonBg.setInteractive({ useHandCursor: true });
-    const buttonText = scene.add.text(0, cardHeight * 0.37, "Continue", {
-      fontFamily: "Space Grotesk",
-      fontSize: 16,
-      color: "#ffffff",
-      fontStyle: "bold",
-    });
-    buttonText.setOrigin(0.5);
-
-    overlay.add([shadow, cardBg, accent, typeText, titleText, descText, effectText, buttonBg, buttonText]);
-
-    overlay.shadow = shadow;
-    overlay.cardBg = cardBg;
-    overlay.accent = accent;
-    overlay.typeText = typeText;
-    overlay.titleText = titleText;
-    overlay.descText = descText;
-    overlay.effectText = effectText;
-    overlay.buttonBg = buttonBg;
-    overlay.buttonText = buttonText;
-
-    const closeHandler = () => closeCardModal();
-    overlay.setSize(cardWidth, cardHeight);
-    overlay.setInteractive(
-      new Phaser.Geom.Rectangle(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight),
-      Phaser.Geom.Rectangle.Contains
-    );
-    overlay.on("pointerdown", closeHandler);
-    cardBg.on("pointerdown", closeHandler);
-    buttonBg.on("pointerdown", closeHandler);
-    buttonText.setInteractive({ useHandCursor: true });
-    buttonText.on("pointerdown", closeHandler);
-
-    return overlay;
-  }
-
   async function rollDieAnimated() {
     const finalValue = rollDie();
-    if (!gameScene || !gameScene.diceGroup) return finalValue;
+    if (!diceOverlayEl || !diceBoxEl || !diceValueEl) return finalValue;
 
     const spins = 10;
     let count = 0;
 
     return new Promise((resolve) => {
-      const centerX = gameScene.scale.width / 2;
-      const centerY = gameScene.scale.height / 2;
       const diceSize = Math.max(90, Math.min(160, gameScene.scale.width * 0.18));
-      gameScene.diceGroup.setPosition(centerX, centerY);
-      gameScene.diceBox.setSize(diceSize, diceSize);
-      gameScene.diceText.setFontSize(Math.floor(diceSize * 0.6));
-      gameScene.diceGroup.setScale(0.2);
-      gameScene.diceGroup.setAlpha(0);
-      gameScene.diceGroup.setVisible(true);
-      gameScene.diceGroup.angle = 0;
+      diceBoxEl.style.width = `${diceSize}px`;
+      diceBoxEl.style.height = `${diceSize}px`;
+      diceBoxEl.style.borderRadius = `${Math.max(12, diceSize * 0.18)}px`;
+      diceValueEl.style.fontSize = `${Math.floor(diceSize * 0.6)}px`;
+      diceOverlayEl.classList.remove("hidden");
+      diceOverlayEl.style.display = "flex";
 
-      gameScene.tweens.add({
-        targets: gameScene.diceGroup,
-        scale: 1,
-        alpha: 1,
-        duration: 180,
-        ease: "Back.easeOut",
-      });
+      diceBoxEl.animate(
+        [
+          { transform: "scale(0.2) rotate(0deg)", opacity: 0 },
+          { transform: "scale(1) rotate(0deg)", opacity: 1 },
+        ],
+        { duration: 180, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)", fill: "forwards" }
+      );
 
-      gameScene.tweens.add({
-        targets: gameScene.diceGroup,
-        angle: { from: -12, to: 12 },
-        duration: 70,
-        yoyo: true,
-        repeat: spins,
-      });
+      const wiggle = diceBoxEl.animate(
+        [
+          { transform: "scale(1) rotate(-12deg)" },
+          { transform: "scale(1) rotate(12deg)" },
+        ],
+        { duration: 70, direction: "alternate", iterations: spins * 2, easing: "ease-in-out" }
+      );
 
-      gameScene.time.addEvent({
-        delay: 70,
-        repeat: spins,
-        callback: () => {
-          count += 1;
-          const temp = rollDie();
-          gameScene.diceText.setText(temp);
-          if (count >= spins) {
-            gameScene.diceText.setText(finalValue);
-          }
-        },
-      });
+      const interval = setInterval(() => {
+        count += 1;
+        const temp = rollDie();
+        diceValueEl.textContent = `${temp}`;
+        if (count >= spins) {
+          diceValueEl.textContent = `${finalValue}`;
+        }
+      }, 70);
 
-      gameScene.time.delayedCall(70 * (spins + 1) + 50, () => {
-        gameScene.tweens.add({
-          targets: gameScene.diceGroup,
-          scale: 0.2,
-          alpha: 0,
-          duration: 160,
-          ease: "Back.easeIn",
-          onComplete: () => {
-            gameScene.diceGroup.angle = 0;
-            gameScene.diceGroup.setVisible(false);
-          },
-        });
+      setTimeout(() => {
+        clearInterval(interval);
+        wiggle.cancel();
+        diceBoxEl.animate(
+          [
+            { transform: "scale(1) rotate(0deg)", opacity: 1 },
+            { transform: "scale(0.2) rotate(0deg)", opacity: 0 },
+          ],
+          { duration: 160, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" }
+        ).onfinish = () => {
+          diceOverlayEl.classList.add("hidden");
+          diceOverlayEl.style.display = "none";
+        };
         resolve(finalValue);
-      });
+      }, 70 * (spins + 1) + 50);
     });
   }
 
@@ -598,9 +523,11 @@ function createGame(data) {
     gameState.worldOffsetX = -cameraPad;
     gameState.worldOffsetY = -cameraPad;
 
-    scene.boardGraphics.clear();
     if (scene.decorGraphics) {
       scene.decorGraphics.clear();
+    }
+    if (scene.boardGraphics) {
+      scene.boardGraphics.clear();
     }
     scene.labels.forEach((label) => label.destroy());
     scene.labels = [];
@@ -638,13 +565,8 @@ function createGame(data) {
     gameState.tileSize = tileSize;
 
     if (scene.cloppy) {
-      const texture = scene.textures.get("cloppy");
-      const source = texture?.getSourceImage?.();
-      if (source && source.width) {
-        const targetSize = tileSize * 1.25;
-        const scale = targetSize / Math.max(source.width, source.height);
-        scene.cloppy.setScale(scale);
-      }
+      const targetSize = tileSize * 1.25;
+      updateCloppySize(scene, targetSize);
       const pos = scene.positions[gameState.currentIndex];
       scene.cloppy.setPosition(pos.x, pos.y);
     }
@@ -659,15 +581,22 @@ function createGame(data) {
       camera.setScroll(scroll.x, scroll.y);
     }
 
-    if (scene.diceGroup) {
-      scene.diceGroup.setVisible(false);
-    }
-
-    if (scene.cardOverlay) {
-      scene.cardOverlay.setPosition(width / 2, height / 2);
-    }
+    // Dice and cards are HTML overlays handled outside Phaser.
 
     drawDecorations(scene, tileSize);
+  }
+
+  function updateCloppySize(scene, targetSize) {
+    if (!scene.cloppy?.node) return;
+    const size = Math.round(targetSize);
+    if (gameState.cloppyTextureSize === size) return;
+    scene.cloppy.node.style.width = `${size}px`;
+    scene.cloppy.node.style.height = `${size}px`;
+    if (scene.cloppy.updateSize) {
+      scene.cloppy.updateSize();
+    }
+    scene.cloppy.setOrigin(0.5, 0.9);
+    gameState.cloppyTextureSize = size;
   }
 
   function drawDecorations(scene, tileSize) {
